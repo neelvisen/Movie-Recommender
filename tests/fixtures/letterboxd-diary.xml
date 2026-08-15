@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:letterboxd="https://letterboxd.com" xmlns:tmdb="https://themoviedb.org" version="2.0">
+<channel>
+<title>Letterboxd diary entries for testuser</title>
+<link>https://letterboxd.com/testuser/</link>
+<description>Recent diary entries from Letterboxd member testuser</description>
+<item>
+<title>Her, 2013 - &#9733;&#9733;&#9733;&#9733;&#9733;</title>
+<link>https://letterboxd.com/testuser/film/her/1/</link>
+<guid isPermaLink="false">letterboxd-watch-1234-her-2013</guid>
+<pubDate>Mon, 15 Jan 2024 12:00:00 +1300</pubDate>
+<letterboxd:watchedDate>2024-01-15</letterboxd:watchedDate>
+<letterboxd:rewatch>No</letterboxd:rewatch>
+<letterboxd:filmTitle>Her</letterboxd:filmTitle>
+<letterboxd:filmYear>2013</letterboxd:filmYear>
+<letterboxd:memberRating>5</letterboxd:memberRating>
+<tmdb:movieId>152601</tmdb:movieId>
+<description><![CDATA[<p><img src="https://a.ltrbxd.com/resized/poster.jpg"/></p>]]></description>
+</item>
+<item>
+<title>Cats, 2019 - &#9733;</title>
+<link>https://letterboxd.com/testuser/film/cats-2019/</link>
+<guid isPermaLink="false">letterboxd-watch-5678-cats-2019</guid>
+<pubDate>Sun, 07 Jan 2024 09:00:00 +1300</pubDate>
+<letterboxd:watchedDate>2024-01-07</letterboxd:watchedDate>
+<letterboxd:rewatch>No</letterboxd:rewatch>
+<letterboxd:filmTitle>Cats</letterboxd:filmTitle>
+<letterboxd:filmYear>2019</letterboxd:filmYear>
+<letterboxd:memberRating>1</letterboxd:memberRating>
+<tmdb:movieId>531219</tmdb:movieId>
+<description><![CDATA[<p>Never again.</p>]]></description>
+</item>
+<item>
+<title>Paddington 2, 2017 - &#9733;&#9733;&#9733;&#9733;&#189;</title>
+<link>https://letterboxd.com/testuser/film/paddington-2/</link>
+<guid isPermaLink="false">letterboxd-watch-9999-paddington-2</guid>
+<pubDate>Sat, 30 Dec 2023 20:00:00 +1300</pubDate>
+<letterboxd:watchedDate>2023-12-30</letterboxd:watchedDate>
+<letterboxd:rewatch>Yes</letterboxd:rewatch>
+<letterboxd:filmTitle>Paddington 2</letterboxd:filmTitle>
+<letterboxd:filmYear>2017</letterboxd:filmYear>
+<letterboxd:memberRating>4.5</letterboxd:memberRating>
+<tmdb:movieId>346648</tmdb:movieId>
+<description><![CDATA[<p>Comfort rewatch.</p>]]></description>
+</item>
+</channel>
+</rss>

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listRegionProviders } from "@/lib/tmdb";
+import { isCuratedProvider, listRegionProviders } from "@/lib/tmdb";
 
 export async function GET(req: NextRequest) {
   const region = req.nextUrl.searchParams.get("region") || "CA";
   try {
-    const providers = await listRegionProviders(region);
+    const providers = (await listRegionProviders(region)).filter((p) => isCuratedProvider(p.providerName));
     return NextResponse.json({ providers });
   } catch (err) {
     console.error(err);

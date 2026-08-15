@@ -103,4 +103,82 @@ describe("buildRecommendations", () => {
     expect(result.seedTitles).toEqual([]);
     expect(result.recommendations).toEqual([]);
   });
+
+  it("diversifies seeds so one recently-clustered genre can't crowd out the rest of your taste", async () => {
+    const ROMANCE = 10749;
+    const SCIFI = 878;
+    const romanceDiary: LetterboxdDiaryEntry[] = [5, 4.9, 4.8, 4.7, 4.6, 4.5, 4.4].map((rating, i) => ({
+      filmTitle: `Romance ${i + 1}`,
+      filmYear: 2020,
+      rating,
+      watchedDate: "2024-01-01",
+      rewatch: false,
+      letterboxdUrl: "",
+      tmdbId: 100 + i,
+    }));
+    const scifiDiary: LetterboxdDiaryEntry[] = [4.3, 4.2].map((rating, i) => ({
+      filmTitle: `Sci-Fi ${i + 1}`,
+      filmYear: 2020,
+      rating,
+      watchedDate: "2024-01-01",
+      rewatch: false,
+      letterboxdUrl: "",
+      tmdbId: 200 + i,
+    }));
+
+    vi.mocked(fetchDiary).mockResolvedValue([...romanceDiary, ...scifiDiary]);
+    vi.mocked(getMovie).mockImplementation(async (id: number) =>
+      id >= 200 ? movie(id, `Sci-Fi ${id - 199}`, [SCIFI]) : movie(id, `Romance ${id - 99}`, [ROMANCE])
+    );
+
+    const result = await buildRecommendations({ username: "testuser", region: "CA", providerIds: [] });
+
+    // 9 films qualify as seeds (rating >= 4) but only 8 seed slots exist. The old
+    // "top 8 by rating" rule would fill 7 of them with romance and cut both sci-fi
+    // films down to one. With a 2-per-genre cap, both sci-fi films make the cut...
+    expect(result.seedTitles).toEqual(expect.arrayContaining(["Sci-Fi 1", "Sci-Fi 2"]));
+    // ...and the lowest-rated romance is what gets dropped to make room instead.
+    expect(result.seedTitles).not.toContain("Romance 7");
+    expect(result.seedTitles).toHaveLength(8);
+  });
+
+  it("treats a disliked genre as a negative signal rather than always-positive weight", async () => {
+    vi.mocked(fetchDiary).mockResolvedValue([
+      {
+        filmTitle: "Loved Action Movie",
+        filmYear: 2020,
+        rating: 5,
+        watchedDate: "2024-01-01",
+        rewatch: false,
+        letterboxdUrl: "",
+        tmdbId: 300,
+      },
+      {
+        filmTitle: "Hated Comedy",
+        filmYear: 2020,
+        rating: 1,
+        watchedDate: "2024-01-01",
+        rewatch: false,
+        letterboxdUrl: "",
+        tmdbId: 301,
+      },
+    ]);
+    vi.mocked(getMovie).mockImplementation(async (id: number) => {
+      if (id === 300) return movie(300, "Loved Action Movie", [28]);
+      return movie(301, "Hated Comedy", [35]);
+    });
+    vi.mocked(getRecommendationsFor).mockImplementation(async (id: number) =>
+      id === 300 ? [movie(310, "Candidate Action", [28]), movie(311, "Candidate Comedy", [35])] : []
+    );
+
+    const result = await buildRecommendations({ username: "testuser", region: "CA", providerIds: [] });
+
+    const action = result.recommendations.find((r) => r.movie.id === 310)!;
+    const comedy = result.recommendations.find((r) => r.movie.id === 311)!;
+
+    // Both got the same seed boost (5, from "Loved Action Movie" recommending them both);
+    // genre affinity should push one above that baseline and the other below it.
+    expect(action.score).toBeGreaterThan(5);
+    expect(comedy.score).toBeLessThan(5);
+  });
 });

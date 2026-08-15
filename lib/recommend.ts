@@ -6,6 +6,10 @@ const SEED_COUNT = 8;
 const CANDIDATE_LIMIT = 40;
 const RESULT_LIMIT = 20;
 const MIN_SEED_RATING = 4;
+/** A 3-star rating is treated as "watched, neutral" — genre weight is signed around it. */
+const NEUTRAL_RATING = 3;
+/** Caps how many seeds can share a primary genre, so a recent binge of one genre can't crowd out the rest of your taste. */
+const MAX_SEEDS_PER_GENRE = 2;
 
 /** Runs `fn` over `items` with bounded concurrency; a single failed item is dropped, not fatal. */
 async function pMap<T, R>(items: T[], fn: (item: T) => Promise<R | null>, concurrency: number): Promise<R[]> {
@@ -52,10 +56,13 @@ export interface BuildRecommendationsResult {
 /**
  * Builds a recommendation list from a Letterboxd user's recent diary:
  *  1. Resolve diary entries to TMDB movies.
- *  2. Treat films rated 4+ stars as taste "seeds" and pull TMDB's
+ *  2. Treat films rated 4+ stars as taste "seeds" (capped per genre, so one
+ *     recent cluster of similar films can't dominate) and pull TMDB's
  *     recommendations for each.
  *  3. Score candidates by how many seeds surfaced them, plus a genre-affinity
- *     bonus from the user's whole rated history, excluding anything already watched.
+ *     bonus from the user's whole rated history — signed around a neutral
+ *     3-star rating, so genres you watch a lot but don't rate well pull the
+ *     score down — excluding anything already watched.
  *  4. Attach Canada (or the requested region) streaming availability, and
  *     optionally filter down to the user's own subscriptions.
  */
@@ -72,18 +79,42 @@ export async function buildRecommendations({
   const resolved = await pMap(diary, resolveEntry, 5);
   const watchedIds = new Set(resolved.map((r) => r.movie.id));
 
+  // Signed around a 3-star "neutral" rating, so genres you watch a lot but rate
+  // poorly pull the affinity score down instead of just adding less-positive weight.
   const genreWeight = new Map<number, number>();
   for (const { entry, movie } of resolved) {
-    const weight = entry.rating ?? 3;
+    const weight = (entry.rating ?? NEUTRAL_RATING) - NEUTRAL_RATING;
     for (const genreId of movie.genreIds) {
       genreWeight.set(genreId, (genreWeight.get(genreId) ?? 0) + weight);
     }
   }
 
-  const seeds = resolved
+  // Highest-rated films first, but cap how many seeds can share a primary genre so
+  // e.g. a run of recently-watched, highly-rated romances doesn't fill every seed
+  // slot and drown out the rest of your taste. Genre-capped films are still used
+  // to fill any seed slots left over once diversity is satisfied.
+  const qualifying = resolved
     .filter((r) => (r.entry.rating ?? 0) >= MIN_SEED_RATING)
-    .sort((a, b) => (b.entry.rating ?? 0) - (a.entry.rating ?? 0))
-    .slice(0, SEED_COUNT);
+    .sort((a, b) => (b.entry.rating ?? 0) - (a.entry.rating ?? 0));
+
+  const seeds: ResolvedEntry[] = [];
+  const deferred: ResolvedEntry[] = [];
+  const seedsPerGenre = new Map<number, number>();
+  for (const candidate of qualifying) {
+    const primaryGenre = candidate.movie.genreIds[0];
+    const countSoFar = primaryGenre !== undefined ? seedsPerGenre.get(primaryGenre) ?? 0 : 0;
+    if (primaryGenre !== undefined && countSoFar >= MAX_SEEDS_PER_GENRE) {
+      deferred.push(candidate);
+      continue;
+    }
+    seeds.push(candidate);
+    if (primaryGenre !== undefined) seedsPerGenre.set(primaryGenre, countSoFar + 1);
+    if (seeds.length >= SEED_COUNT) break;
+  }
+  for (const candidate of deferred) {
+    if (seeds.length >= SEED_COUNT) break;
+    seeds.push(candidate);
+  }
 
   if (seeds.length === 0) {
     return { recommendations: [], watchedCount: watchedIds.size, seedTitles: [] };

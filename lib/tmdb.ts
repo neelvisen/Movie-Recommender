@@ -112,6 +112,17 @@ export async function listRegionProviders(region: string): Promise<WatchProvider
     .sort((a, b) => a.providerName.localeCompare(b.providerName));
 }
 
+/**
+ * Services actually worth showing right now. Matched by substring against
+ * whatever TMDB returns, so small naming differences (e.g. "Apple TV Plus"
+ * vs "Apple TV") still match. Edit this list as your subscriptions change.
+ */
+const CURATED_PROVIDER_PATTERNS = [/netflix/i, /crave/i, /disney/i, /prime video/i, /apple tv/i, /criterion/i];
+
+export function isCuratedProvider(providerName: string): boolean {
+  return CURATED_PROVIDER_PATTERNS.some((pattern) => pattern.test(providerName));
+}
+
 export async function getGenreMap(): Promise<Map<number, string>> {
   const data = await tmdbFetch<{ genres: TmdbGenre[] }>("/genre/movie/list");
   return new Map(data.genres.map((g) => [g.id, g.name]));
